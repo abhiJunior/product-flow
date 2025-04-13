@@ -8,49 +8,54 @@ import ReactFlow, {
   Background,
 } from 'react-flow-renderer';
 import { v4 as uuidv4 } from 'uuid';
+import CustomNode from './CustomNode'; // Import custom node component
 
-// Custom node component import
-import CustomNode from './CustomNode'; 
-
-// Custom node type
+// Register custom node
 const nodeTypes = {
-  custom: CustomNode, // Use CustomNode as the custom node type
+  custom: CustomNode,
 };
 
 const FlowEditor = ({ selectedProduct }) => {
   const [nodes, setNodes] = useState([]);
   const [edges, setEdges] = useState([]);
 
-  // Add a node whenever a product is selected
+  // Add node on product selection
   useEffect(() => {
     if (selectedProduct) {
       const newNode = {
-        id: uuidv4(), // Unique ID for the node
-        type: 'custom', // Set to 'custom' to render CustomNode
+        id: uuidv4(),
+        type: 'custom',
         position: {
-          x: Math.random() * 300, // Random position
+          x: Math.random() * 300,
           y: Math.random() * 300,
         },
         data: {
-           // Product price
-          title: selectedProduct.title, // Product title
-          price: selectedProduct.price, // Product price
-          deleteNode: handleDeleteNode, // Pass deleteNode function
-          
+          title: selectedProduct.title,
+          price: selectedProduct.price,
+          deleteNode: handleDeleteNode,
         },
       };
 
-      console.log('Adding node:', newNode); // Debugging
       setNodes((prev) => [...prev, newNode]);
     }
   }, [selectedProduct]);
 
-  // Delete node function
+  // Delete node & its connected edges
   const handleDeleteNode = (id) => {
-    console.log(`Deleting node with ID: ${id}`); // Debugging
-    setNodes((prev) => prev.filter((node) => node.id !== id)); // Remove node
-    setEdges((prev) => prev.filter((edge) => edge.source !== id && edge.target !== id)); // Remove connected edges
+    setNodes((prev) => prev.filter((node) => node.id !== id));
+    setEdges((prev) => prev.filter((edge) => edge.source !== id && edge.target !== id));
   };
+
+  // Delete edge by ID
+  const handleDeleteEdge = useCallback((edgeId) => {
+    setEdges((prev) => prev.filter((edge) => edge.id !== edgeId));
+  }, []);
+
+  // Trigger edge deletion on click
+  const onEdgeClick = useCallback((event, edge) => {
+    event.stopPropagation();
+    handleDeleteEdge(edge.id);
+  }, [handleDeleteEdge]);
 
   const onNodesChange = useCallback(
     (changes) => setNodes((nds) => applyNodeChanges(changes, nds)),
@@ -63,19 +68,24 @@ const FlowEditor = ({ selectedProduct }) => {
   );
 
   const onConnect = useCallback(
-    (connection) => setEdges((eds) => addEdge(connection, eds)),
+    (connection) =>
+      setEdges((eds) =>
+        addEdge({ ...connection, style: { stroke: '#ccc' }, animated: true }, eds)
+      ),
     []
   );
+  
 
   return (
     <div style={{ width: '100%', height: '100%' }}>
       <ReactFlow
         nodes={nodes}
         edges={edges}
-        nodeTypes={nodeTypes} // Use custom node type
+        nodeTypes={nodeTypes}
         onNodesChange={onNodesChange}
         onEdgesChange={onEdgesChange}
         onConnect={onConnect}
+        onEdgeClick={onEdgeClick} // 👈 edge deletion
         fitView
       >
         <MiniMap />
